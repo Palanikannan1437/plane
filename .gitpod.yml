@@ -1,0 +1,42 @@
+tasks:
+  - name: Next.js Frontend
+    init: yarn install
+    command: cd apps/app && yarn dev
+  
+  - name: Django Backend
+    before: cd apiserver
+    init: pip install -r requirements.txt 
+    command: gp sync-await postgres-service && gp sync-await redis-service && python manage.py migrate --settings=plane.settings.local && python manage.py runserver --settings=plane.settings.local
+
+  - name: Postgres Service
+    init: docker pull postgres
+    command: docker run --name plane-db -p 5432:5432 -e POSTGRES_PASSWORD=plane -e POSTGRES_USER=plane -d postgres && gp sync-done postgres-service && exit
+
+  - name: Redis Service
+    init: docker pull redis
+    command: docker run --name plane-redis -d redis redis-server --save 60 1 --loglevel warning && gp sync-done redis-service && exit
+
+ports:
+   - port: 3000
+     onOpen: open-preview
+     visibility: public
+     name: Frontend
+     description: Next.js app for RC4Community
+   - port: 8000
+     onOpen: ignore
+     visibility: public
+     name: Backend
+   - port: 5432
+     onOpen: ignore
+     visibility: public
+     name: Postgres
+
+github:
+  prebuilds:
+    master: true
+    branches: true
+    pullRequests: true
+    pullRequestsFromForks: true
+    addCheck: true
+    addComment: true
+    addBadge: true
