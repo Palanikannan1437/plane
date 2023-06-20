@@ -65,9 +65,9 @@ if os.environ.get("SENTRY_DSN", False):
         traces_sample_rate=0.7,
     )
 
-REDIS_HOST = "localhost"
+REDIS_HOST = "plane-redis"
 REDIS_PORT = 6379
-REDIS_URL = os.environ.get("REDIS_URL")
+REDIS_URL = "redis://${REDIS_HOST}:6379/"
 
 
 MEDIA_URL = "/uploads/"
