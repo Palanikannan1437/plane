@@ -21,8 +21,8 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql_psycopg2",
         "NAME": os.environ.get("PGUSER", "plane"),
-        "USER": "plane",
-        "PASSWORD": "plane",
+        "USER": os.environ.get("PGUSER", "plane"),
+        "PASSWORD": os.environ.get("PGPASSWORD", "plane"),
         "HOST": os.environ.get("PGHOST", "localhost"),
     }
 }
@@ -63,11 +63,12 @@ if os.environ.get("SENTRY_DSN", False):
         send_default_pii=True,
         environment="local",
         traces_sample_rate=0.7,
+        profiles_sample_rate=1.0,
     )
 
-REDIS_HOST = "plane-redis"
+REDIS_HOST = "localhost"
 REDIS_PORT = 6379
-REDIS_URL = "redis://${REDIS_HOST}:6379/"
+REDIS_URL = os.environ.get("REDIS_URL")
 
 
 MEDIA_URL = "/uploads/"

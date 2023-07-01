@@ -1,20 +1,41 @@
 tasks:
   - name: Next.js Frontend
+    before: cd apps/app
     init: yarn install
-    command: cd apps/app && yarn dev
+    command: |
+      cp .env.example .env &&
+      sed -i 's/^DEBUG=.*/DEBUG=1/' .env &&
+      sed -i 's/^PGHOST=.*/PGHOST=localhost/' .env &&
+      sed -i 's/^REDIS_HOST=.*/REDIS_HOST=localhost/' .env &&
+      gp sync-done copy-env
+      yarn dev
   
   - name: Django Backend
     before: cd apiserver
     init: pip install -r requirements.txt 
-    command: gp sync-await postgres-service && gp sync-await redis-service && python manage.py migrate --settings=plane.settings.local && python manage.py runserver --settings=plane.settings.local
+    command: |
+      gp sync-await copy-env &&
+      set -a &&
+      source ../.env &&
+      set +a &&
+      gp sync-await postgres-service && 
+      gp sync-await redis-service && 
+      python manage.py migrate --settings=plane.settings.local && 
+      python manage.py runserver --settings=plane.settings.local
 
   - name: Postgres Service
     init: docker pull postgres
-    command: docker run --name plane-db -p 5432:5432 -e POSTGRES_PASSWORD=plane -e POSTGRES_USER=plane -d postgres && gp sync-done postgres-service && exit
+    command: |
+      docker run --name plane-db -p 5432:5432 -e POSTGRES_PASSWORD=plane -e POSTGRES_USER=plane -d postgres &&
+      gp sync-done postgres-service && 
+      exit
 
   - name: Redis Service
     init: docker pull redis
-    command: docker run --name plane-redis -d redis redis-server --save 60 1 --loglevel warning && gp sync-done redis-service && exit
+    command: |
+      docker run --name plane-redis -p 6379:6379 -d redis redis-server --save 60 1 --loglevel warning && 
+      gp sync-done redis-service && 
+      exit
 
 ports:
    - port: 3000
