@@ -1,13 +1,13 @@
 tasks:
   - name: Next.js Frontend
-    before: cd apps/app
     init: yarn install
     command: |
       cp .env.example .env &&
       sed -i 's/^DEBUG=.*/DEBUG=1/' .env &&
       sed -i 's/^PGHOST=.*/PGHOST=localhost/' .env &&
       sed -i 's/^REDIS_HOST=.*/REDIS_HOST=localhost/' .env &&
-      gp sync-done copy-env
+      gp sync-done copy-env &&
+      cd apps/app &&
       yarn dev
   
   - name: Django Backend
