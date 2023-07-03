@@ -16,6 +16,7 @@ DEBUG = int(os.environ.get(
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
+ALLOWED_HOSTS = ["*"]
 
 DATABASES = {
     "default": {
