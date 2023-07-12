@@ -23,7 +23,6 @@ import {
   IssueStateSelect,
 } from "components/issues/select";
 import { CreateStateModal } from "components/states";
-import { CreateUpdateCycleModal } from "components/cycles";
 import { CreateLabelModal } from "components/labels";
 // ui
 import {
@@ -73,7 +72,6 @@ const defaultValues: Partial<IIssue> = {
   description_html: "<p></p>",
   estimate_point: null,
   state: "",
-  cycle: null,
   priority: null,
   assignees: [],
   assignees_list: [],
@@ -122,7 +120,6 @@ export const IssueForm: FC<IssueFormProps> = ({
 }) => {
   // states
   const [mostSimilarIssue, setMostSimilarIssue] = useState<IIssue | undefined>();
-  const [cycleModal, setCycleModal] = useState(false);
   const [stateModal, setStateModal] = useState(false);
   const [labelModal, setLabelModal] = useState(false);
   const [parentIssueListModalOpen, setParentIssueListModalOpen] = useState(false);
@@ -148,7 +145,7 @@ export const IssueForm: FC<IssueFormProps> = ({
     setValue,
     setFocus,
   } = useForm<IIssue>({
-    defaultValues,
+    defaultValues: initialData ?? defaultValues,
     reValidateMode: "onChange",
   });
 
@@ -162,6 +159,8 @@ export const IssueForm: FC<IssueFormProps> = ({
 
   const handleCreateUpdateIssue = async (formData: Partial<IIssue>) => {
     await handleFormSubmit(formData);
+
+    setGptAssistantModal(false);
 
     reset({
       ...defaultValues,
@@ -198,7 +197,7 @@ export const IssueForm: FC<IssueFormProps> = ({
         projectId as string,
         {
           prompt: issueName,
-          task: "Generate a proper description for this issue in context of a project management software.",
+          task: "Generate a proper description for this issue.",
         },
         user
       )
@@ -250,11 +249,6 @@ export const IssueForm: FC<IssueFormProps> = ({
             projectId={projectId}
             user={user}
           />
-          <CreateUpdateCycleModal
-            isOpen={cycleModal}
-            handleClose={() => setCycleModal(false)}
-            user={user}
-          />
           <CreateLabelModal
             isOpen={labelModal}
             handleClose={() => setLabelModal(false)}
@@ -279,14 +273,14 @@ export const IssueForm: FC<IssueFormProps> = ({
                 )}
               />
             )}
-            <h3 className="text-xl font-semibold leading-6 text-brand-base">
+            <h3 className="text-xl font-semibold leading-6 text-custom-text-100">
               {status ? "Update" : "Create"} Issue
             </h3>
           </div>
           {watch("parent") &&
             watch("parent") !== "" &&
             (fieldsToShow.includes("all") || fieldsToShow.includes("parent")) && (
-              <div className="flex w-min items-center gap-2 whitespace-nowrap rounded bg-brand-surface-2 p-2 text-xs">
+              <div className="flex w-min items-center gap-2 whitespace-nowrap rounded bg-custom-background-80 p-2 text-xs">
                 <div className="flex items-center gap-2">
                   <span
                     className="block h-1.5 w-1.5 rounded-full"
@@ -295,7 +289,7 @@ export const IssueForm: FC<IssueFormProps> = ({
                         .color,
                     }}
                   />
-                  <span className="flex-shrink-0 text-brand-secondary">
+                  <span className="flex-shrink-0 text-custom-text-200">
                     {/* {projects?.find((p) => p.id === projectId)?.identifier}- */}
                     {issues.find((i) => i.id === watch("parent"))?.sequence_id}
                   </span>
@@ -332,7 +326,7 @@ export const IssueForm: FC<IssueFormProps> = ({
                   />
                   {mostSimilarIssue && (
                     <div className="flex items-center gap-x-2">
-                      <p className="text-sm text-brand-secondary">
+                      <p className="text-sm text-custom-text-200">
                         <Link
                           href={`/${workspaceSlug}/projects/${projectId}/issues/${mostSimilarIssue.id}`}
                         >
@@ -348,7 +342,7 @@ export const IssueForm: FC<IssueFormProps> = ({
                       </p>
                       <button
                         type="button"
-                        className="text-sm text-brand-accent"
+                        className="text-sm text-custom-primary"
                         onClick={() => {
                           setMostSimilarIssue(undefined);
                         }}
@@ -365,7 +359,7 @@ export const IssueForm: FC<IssueFormProps> = ({
                     {issueName && issueName !== "" && (
                       <button
                         type="button"
-                        className={`flex items-center gap-1 rounded px-1.5 py-1 text-xs hover:bg-brand-surface-1 ${
+                        className={`flex items-center gap-1 rounded px-1.5 py-1 text-xs hover:bg-custom-background-90 ${
                           iAmFeelingLucky ? "cursor-wait" : ""
                         }`}
                         onClick={handleAutoGenerateDescription}
@@ -382,7 +376,7 @@ export const IssueForm: FC<IssueFormProps> = ({
                     )}
                     <button
                       type="button"
-                      className="flex items-center gap-1 rounded px-1.5 py-1 text-xs hover:bg-brand-surface-1"
+                      className="flex items-center gap-1 rounded px-1.5 py-1 text-xs hover:bg-custom-background-90"
                       onClick={() => setGptAssistantModal((prevData) => !prevData)}
                     >
                       <SparklesIcon className="h-4 w-4" />
@@ -535,7 +529,7 @@ export const IssueForm: FC<IssueFormProps> = ({
             </div>
           </div>
         </div>
-        <div className="-mx-5 mt-5 flex items-center justify-between gap-2 border-t border-brand-base px-5 pt-5">
+        <div className="-mx-5 mt-5 flex items-center justify-between gap-2 border-t border-custom-border-100 px-5 pt-5">
           <div
             className="flex cursor-pointer items-center gap-1"
             onClick={() => setCreateMore((prevData) => !prevData)}

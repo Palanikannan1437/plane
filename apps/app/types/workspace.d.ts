@@ -14,6 +14,7 @@ export interface IWorkspace {
   readonly created_by: string;
   readonly updated_by: string;
   company_size: number | null;
+  total_issues: number | null;
 }
 
 export interface IWorkspaceLite {
@@ -45,6 +46,8 @@ export type Properties = {
   link: boolean;
   attachment_count: boolean;
   estimate: boolean;
+  created_on: boolean;
+  updated_on: boolean;
 };
 
 export interface IWorkspaceMember {

@@ -12,6 +12,8 @@ import { Combobox, Dialog, Transition } from "@headlessui/react";
 import issuesServices from "services/issues.service";
 // hooks
 import useToast from "hooks/use-toast";
+import useIssuesView from "hooks/use-issues-view";
+import useCalendarIssuesView from "hooks/use-calendar-issues-view";
 // ui
 import { DangerButton, SecondaryButton } from "components/ui";
 // icons
@@ -20,7 +22,15 @@ import { LayerDiagonalIcon } from "components/icons";
 // types
 import { ICurrentUserResponse, IIssue } from "types";
 // fetch keys
-import { PROJECT_ISSUES_LIST } from "constants/fetch-keys";
+import {
+  CYCLE_DETAILS,
+  CYCLE_ISSUES_WITH_PARAMS,
+  MODULE_DETAILS,
+  MODULE_ISSUES_WITH_PARAMS,
+  PROJECT_ISSUES_LIST,
+  PROJECT_ISSUES_LIST_WITH_PARAMS,
+  VIEW_ISSUES,
+} from "constants/fetch-keys";
 
 type FormInput = {
   delete_issue_ids: string[];
@@ -36,7 +46,7 @@ export const BulkDeleteIssuesModal: React.FC<Props> = ({ isOpen, setIsOpen, user
   const [query, setQuery] = useState("");
 
   const router = useRouter();
-  const { workspaceSlug, projectId } = router.query;
+  const { workspaceSlug, projectId, cycleId, moduleId, viewId } = router.query;
 
   const { data: issues } = useSWR(
     workspaceSlug && projectId
@@ -48,6 +58,9 @@ export const BulkDeleteIssuesModal: React.FC<Props> = ({ isOpen, setIsOpen, user
   );
 
   const { setToastAlert } = useToast();
+  const { issueView, params } = useIssuesView();
+  const { params: calendarParams } = useCalendarIssuesView();
+  const { order_by, group_by, ...viewGanttParams } = params;
 
   const {
     handleSubmit,
@@ -61,6 +74,81 @@ export const BulkDeleteIssuesModal: React.FC<Props> = ({ isOpen, setIsOpen, user
     },
   });
 
+  const handleClose = () => {
+    setIsOpen(false);
+    setQuery("");
+    reset();
+  };
+
+  const handleDelete: SubmitHandler<FormInput> = async (data) => {
+    if (!workspaceSlug || !projectId) return;
+
+    if (!data.delete_issue_ids || data.delete_issue_ids.length === 0) {
+      setToastAlert({
+        type: "error",
+        title: "Error!",
+        message: "Please select at least one issue.",
+      });
+      return;
+    }
+
+    if (!Array.isArray(data.delete_issue_ids)) data.delete_issue_ids = [data.delete_issue_ids];
+
+    const calendarFetchKey = cycleId
+      ? CYCLE_ISSUES_WITH_PARAMS(cycleId.toString(), calendarParams)
+      : moduleId
+      ? MODULE_ISSUES_WITH_PARAMS(moduleId.toString(), calendarParams)
+      : viewId
+      ? VIEW_ISSUES(viewId.toString(), calendarParams)
+      : PROJECT_ISSUES_LIST_WITH_PARAMS(projectId?.toString() ?? "", calendarParams);
+
+    const ganttFetchKey = cycleId
+      ? CYCLE_ISSUES_WITH_PARAMS(cycleId.toString())
+      : moduleId
+      ? MODULE_ISSUES_WITH_PARAMS(moduleId.toString())
+      : viewId
+      ? VIEW_ISSUES(viewId.toString(), viewGanttParams)
+      : PROJECT_ISSUES_LIST_WITH_PARAMS(projectId?.toString() ?? "");
+
+    await issuesServices
+      .bulkDeleteIssues(
+        workspaceSlug as string,
+        projectId as string,
+        {
+          issue_ids: data.delete_issue_ids,
+        },
+        user
+      )
+      .then(() => {
+        setToastAlert({
+          type: "success",
+          title: "Success!",
+          message: "Issues deleted successfully!",
+        });
+
+        if (issueView === "calendar") mutate(calendarFetchKey);
+        else if (issueView === "gantt_chart") mutate(ganttFetchKey);
+        else {
+          if (cycleId) {
+            mutate(CYCLE_ISSUES_WITH_PARAMS(cycleId.toString(), params));
+            mutate(CYCLE_DETAILS(cycleId.toString()));
+          } else if (moduleId) {
+            mutate(MODULE_ISSUES_WITH_PARAMS(moduleId as string, params));
+            mutate(MODULE_DETAILS(moduleId as string));
+          } else mutate(PROJECT_ISSUES_LIST_WITH_PARAMS(projectId.toString(), params));
+        }
+
+        handleClose();
+      })
+      .catch(() =>
+        setToastAlert({
+          type: "error",
+          title: "Error!",
+          message: "Something went wrong. Please try again.",
+        })
+      );
+  };
+
   const filteredIssues: IIssue[] =
     query === ""
       ? issues ?? []
@@ -71,48 +159,6 @@ export const BulkDeleteIssuesModal: React.FC<Props> = ({ isOpen, setIsOpen, user
               .toLowerCase()
               .includes(query.toLowerCase())
         ) ?? [];
-
-  const handleClose = () => {
-    setIsOpen(false);
-    setQuery("");
-    reset();
-  };
-
-  const handleDelete: SubmitHandler<FormInput> = async (data) => {
-    if (!data.delete_issue_ids || data.delete_issue_ids.length === 0) {
-      setToastAlert({
-        title: "Error",
-        type: "error",
-        message: "Please select atleast one issue",
-      });
-      return;
-    }
-
-    if (!Array.isArray(data.delete_issue_ids)) data.delete_issue_ids = [data.delete_issue_ids];
-
-    if (workspaceSlug && projectId) {
-      await issuesServices
-        .bulkDeleteIssues(
-          workspaceSlug as string,
-          projectId as string,
-          {
-            issue_ids: data.delete_issue_ids,
-          },
-          user
-        )
-        .then((res) => {
-          setToastAlert({
-            title: "Success",
-            type: "success",
-            message: res.message,
-          });
-          handleClose();
-        })
-        .catch((e) => {
-          console.log(e);
-        });
-    }
-  };
 
   return (
     <Transition.Root show={isOpen} as={React.Fragment} afterLeave={() => setQuery("")} appear>
@@ -127,7 +173,7 @@ export const BulkDeleteIssuesModal: React.FC<Props> = ({ isOpen, setIsOpen, user
             leaveFrom="opacity-100 scale-100"
             leaveTo="opacity-0 scale-95"
           >
-            <Dialog.Panel className="relative mx-auto max-w-2xl transform divide-y divide-gray-500 rounded-xl border border-brand-base bg-brand-base shadow-2xl transition-all">
+            <Dialog.Panel className="relative mx-auto max-w-2xl transform rounded-xl border border-custom-border-100 bg-custom-background-100 shadow-2xl transition-all">
               <form>
                 <Combobox
                   onChange={(val: string) => {
@@ -142,12 +188,12 @@ export const BulkDeleteIssuesModal: React.FC<Props> = ({ isOpen, setIsOpen, user
                 >
                   <div className="relative m-1">
                     <MagnifyingGlassIcon
-                      className="pointer-events-none absolute top-3.5 left-4 h-5 w-5 text-brand-base text-opacity-40"
+                      className="pointer-events-none absolute top-3.5 left-4 h-5 w-5 text-custom-text-100 text-opacity-40"
                       aria-hidden="true"
                     />
                     <input
                       type="text"
-                      className="h-12 w-full border-0 bg-transparent pl-11 pr-4 text-brand-base placeholder-gray-500 outline-none focus:ring-0 sm:text-sm"
+                      className="h-12 w-full border-0 bg-transparent pl-11 pr-4 text-custom-text-100 outline-none focus:ring-0 sm:text-sm"
                       placeholder="Search..."
                       onChange={(event) => setQuery(event.target.value)}
                     />
@@ -155,16 +201,16 @@ export const BulkDeleteIssuesModal: React.FC<Props> = ({ isOpen, setIsOpen, user
 
                   <Combobox.Options
                     static
-                    className="max-h-80 scroll-py-2 divide-y divide-brand-base overflow-y-auto"
+                    className="max-h-80 scroll-py-2 divide-y divide-custom-border-100 overflow-y-auto"
                   >
                     {filteredIssues.length > 0 ? (
                       <li className="p-2">
                         {query === "" && (
-                          <h2 className="mt-4 mb-2 px-3 text-xs font-semibold text-brand-base">
+                          <h2 className="mt-4 mb-2 px-3 text-xs font-semibold text-custom-text-100">
                             Select issues to delete
                           </h2>
                         )}
-                        <ul className="text-sm text-brand-secondary">
+                        <ul className="text-sm text-custom-text-200">
                           {filteredIssues.map((issue) => (
                             <Combobox.Option
                               key={issue.id}
@@ -172,7 +218,7 @@ export const BulkDeleteIssuesModal: React.FC<Props> = ({ isOpen, setIsOpen, user
                               value={issue.id}
                               className={({ active, selected }) =>
                                 `flex cursor-pointer select-none items-center justify-between rounded-md px-3 py-2 ${
-                                  active ? "bg-brand-surface-2 text-brand-base" : ""
+                                  active ? "bg-custom-background-80 text-custom-text-100" : ""
                                 }`
                               }
                             >
@@ -200,9 +246,9 @@ export const BulkDeleteIssuesModal: React.FC<Props> = ({ isOpen, setIsOpen, user
                     ) : (
                       <div className="flex flex-col items-center justify-center gap-4 px-3 py-8 text-center">
                         <LayerDiagonalIcon height="56" width="56" />
-                        <h3 className="text-brand-secondary">
+                        <h3 className="text-custom-text-200">
                           No issues found. Create a new issue with{" "}
-                          <pre className="inline rounded bg-brand-surface-2 px-2 py-1">C</pre>.
+                          <pre className="inline rounded bg-custom-background-80 px-2 py-1">C</pre>.
                         </h3>
                       </div>
                     )}

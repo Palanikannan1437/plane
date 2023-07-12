@@ -19,6 +19,7 @@ import {
   ViewAssigneeSelect,
   ViewDueDateSelect,
   ViewEstimateSelect,
+  ViewLabelSelect,
   ViewPrioritySelect,
   ViewStateSelect,
 } from "components/issues";
@@ -28,12 +29,13 @@ import { LayerDiagonalIcon } from "components/icons";
 // helper
 import { copyTextToClipboard, truncateText } from "helpers/string.helper";
 // type
-import { ICurrentUserResponse, IIssue } from "types";
+import { ICurrentUserResponse, IIssue, ISubIssueResponse } from "types";
 // fetch-keys
 import {
   CYCLE_ISSUES_WITH_PARAMS,
   MODULE_ISSUES_WITH_PARAMS,
   PROJECT_ISSUES_LIST_WITH_PARAMS,
+  SUB_ISSUES,
   VIEW_ISSUES,
 } from "constants/fetch-keys";
 
@@ -68,7 +70,7 @@ export const SingleCalendarIssue: React.FC<Props> = ({
   const [properties] = useIssuesProperties(workspaceSlug as string, projectId as string);
 
   const partialUpdateIssue = useCallback(
-    (formData: Partial<IIssue>, issueId: string) => {
+    (formData: Partial<IIssue>, issue: IIssue) => {
       if (!workspaceSlug || !projectId) return;
 
       const fetchKey = cycleId
@@ -79,25 +81,54 @@ export const SingleCalendarIssue: React.FC<Props> = ({
         ? VIEW_ISSUES(viewId.toString(), params)
         : PROJECT_ISSUES_LIST_WITH_PARAMS(projectId.toString(), params);
 
-      mutate<IIssue[]>(
-        fetchKey,
-        (prevData) =>
-          (prevData ?? []).map((p) => {
-            if (p.id === issueId) {
-              return {
-                ...p,
-                ...formData,
-                assignees: formData?.assignees_list ?? p.assignees,
-              };
-            }
+      if (issue.parent) {
+        mutate<ISubIssueResponse>(
+          SUB_ISSUES(issue.parent.toString()),
+          (prevData) => {
+            if (!prevData) return prevData;
 
-            return p;
-          }),
-        false
-      );
+            return {
+              ...prevData,
+              sub_issues: (prevData.sub_issues ?? []).map((i) => {
+                if (i.id === issue.id) {
+                  return {
+                    ...i,
+                    ...formData,
+                  };
+                }
+                return i;
+              }),
+            };
+          },
+          false
+        );
+      } else {
+        mutate<IIssue[]>(
+          fetchKey,
+          (prevData) =>
+            (prevData ?? []).map((p) => {
+              if (p.id === issue.id) {
+                return {
+                  ...p,
+                  ...formData,
+                  assignees: formData?.assignees_list ?? p.assignees,
+                };
+              }
+
+              return p;
+            }),
+          false
+        );
+      }
 
       issuesService
-        .patchIssue(workspaceSlug as string, projectId as string, issueId as string, formData, user)
+        .patchIssue(
+          workspaceSlug as string,
+          projectId as string,
+          issue.id as string,
+          formData,
+          user
+        )
         .then(() => {
           mutate(fetchKey);
         })
@@ -132,8 +163,8 @@ export const SingleCalendarIssue: React.FC<Props> = ({
       ref={provided.innerRef}
       {...provided.draggableProps}
       {...provided.dragHandleProps}
-      className={`w-full relative cursor-pointer rounded border border-brand-base px-1.5 py-1.5 text-xs duration-300 hover:cursor-move hover:bg-brand-surface-2 ${
-        snapshot.isDragging ? "bg-brand-surface-2 shadow-lg" : ""
+      className={`w-full relative cursor-pointer rounded border border-custom-border-100 px-1.5 py-1.5 text-xs duration-300 hover:cursor-move hover:bg-custom-background-80 ${
+        snapshot.isDragging ? "bg-custom-background-80 shadow-lg" : ""
       }`}
     >
       <div className="group/card flex w-full flex-col items-start justify-center gap-1.5 text-xs sm:w-auto ">
@@ -168,18 +199,18 @@ export const SingleCalendarIssue: React.FC<Props> = ({
                 tooltipHeading="Issue ID"
                 tooltipContent={`${issue.project_detail?.identifier}-${issue.sequence_id}`}
               >
-                <span className="flex-shrink-0 text-xs text-brand-secondary">
+                <span className="flex-shrink-0 text-xs text-custom-text-200">
                   {issue.project_detail?.identifier}-{issue.sequence_id}
                 </span>
               </Tooltip>
             )}
             <Tooltip position="top-left" tooltipHeading="Title" tooltipContent={issue.name}>
-              <span className="text-xs text-brand-base">{truncateText(issue.name, 25)}</span>
+              <span className="text-xs text-custom-text-100">{truncateText(issue.name, 25)}</span>
             </Tooltip>
           </a>
         </Link>
         {displayProperties && (
-          <div className="relative mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+          <div className="relative mt-1.5 w-full flex flex-wrap items-center gap-2 text-xs">
             {properties.priority && (
               <ViewPrioritySelect
                 issue={issue}
@@ -194,6 +225,7 @@ export const SingleCalendarIssue: React.FC<Props> = ({
                 issue={issue}
                 partialUpdateIssue={partialUpdateIssue}
                 position="left"
+                className="max-w-full"
                 isNotAllowed={isNotAllowed}
                 user={user}
               />
@@ -207,25 +239,14 @@ export const SingleCalendarIssue: React.FC<Props> = ({
                 isNotAllowed={isNotAllowed}
               />
             )}
-            {properties.labels && issue.label_details.length > 0 ? (
-              <div className="flex flex-wrap gap-1">
-                {issue.label_details.map((label) => (
-                  <span
-                    key={label.id}
-                    className="group flex items-center gap-1 rounded-2xl border border-brand-base px-2 py-0.5 text-xs text-brand-secondary"
-                  >
-                    <span
-                      className="h-1.5 w-1.5 rounded-full"
-                      style={{
-                        backgroundColor: label?.color && label.color !== "" ? label.color : "#000",
-                      }}
-                    />
-                    {label.name}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              ""
+            {properties.labels && (
+              <ViewLabelSelect
+                issue={issue}
+                partialUpdateIssue={partialUpdateIssue}
+                position="left"
+                user={user}
+                isNotAllowed={isNotAllowed}
+              />
             )}
             {properties.assignee && (
               <ViewAssigneeSelect
@@ -246,9 +267,9 @@ export const SingleCalendarIssue: React.FC<Props> = ({
               />
             )}
             {properties.sub_issue_count && (
-              <div className="flex cursor-default items-center rounded-md border border-brand-base px-2.5 py-1 text-xs shadow-sm">
+              <div className="flex cursor-default items-center rounded-md border border-custom-border-100 px-2.5 py-1 text-xs shadow-sm">
                 <Tooltip tooltipHeading="Sub-issue" tooltipContent={`${issue.sub_issues_count}`}>
-                  <div className="flex items-center gap-1 text-brand-secondary">
+                  <div className="flex items-center gap-1 text-custom-text-200">
                     <LayerDiagonalIcon className="h-3.5 w-3.5" />
                     {issue.sub_issues_count}
                   </div>
@@ -256,9 +277,9 @@ export const SingleCalendarIssue: React.FC<Props> = ({
               </div>
             )}
             {properties.link && (
-              <div className="flex cursor-default items-center rounded-md border border-brand-base px-2.5 py-1 text-xs shadow-sm">
+              <div className="flex cursor-default items-center rounded-md border border-custom-border-100 px-2.5 py-1 text-xs shadow-sm">
                 <Tooltip tooltipHeading="Links" tooltipContent={`${issue.link_count}`}>
-                  <div className="flex items-center gap-1 text-brand-secondary">
+                  <div className="flex items-center gap-1 text-custom-text-200">
                     <LinkIcon className="h-3.5 w-3.5" />
                     {issue.link_count}
                   </div>
@@ -266,9 +287,9 @@ export const SingleCalendarIssue: React.FC<Props> = ({
               </div>
             )}
             {properties.attachment_count && (
-              <div className="flex cursor-default items-center rounded-md border border-brand-base px-2.5 py-1 text-xs shadow-sm">
+              <div className="flex cursor-default items-center rounded-md border border-custom-border-100 px-2.5 py-1 text-xs shadow-sm">
                 <Tooltip tooltipHeading="Attachments" tooltipContent={`${issue.attachment_count}`}>
-                  <div className="flex items-center gap-1 text-brand-secondary">
+                  <div className="flex items-center gap-1 text-custom-text-200">
                     <PaperClipIcon className="h-3.5 w-3.5 -rotate-45" />
                     {issue.attachment_count}
                   </div>

@@ -89,6 +89,7 @@ export const initialState: StateType = {
     issue__assignees__id: null,
     issue__labels__id: null,
     created_by: null,
+    target_date: null,
   },
 };
 
@@ -168,7 +169,7 @@ export const reducer: ReducerFunctionType = (state, action) => {
         ...state,
         filters: {
           ...state.filters,
-          ...payload,
+          ...payload?.filters,
         },
       };
 

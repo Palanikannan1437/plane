@@ -60,6 +60,7 @@ const useIssuesView = () => {
       ? filters?.issue__labels__id.join(",")
       : undefined,
     created_by: filters?.created_by ? filters?.created_by.join(",") : undefined,
+    target_date: filters?.target_date ? filters?.target_date.join(",") : undefined,
   };
 
   const { data: projectIssues } = useSWR(
@@ -185,7 +186,7 @@ const useIssuesView = () => {
     filters,
     setFilters,
     params,
-    isNotEmpty: !isEmpty,
+    isEmpty,
     resetFilterToDefault,
     setNewFilterDefaultView,
     setIssueView,

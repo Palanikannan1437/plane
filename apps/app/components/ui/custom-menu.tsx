@@ -19,7 +19,9 @@ type Props = {
   noChevron?: boolean;
   position?: "left" | "right";
   verticalPosition?: "top" | "bottom";
+  menuItemsClassName?: string;
   customButton?: JSX.Element;
+  menuItemsWhiteBg?: boolean;
 };
 
 type MenuItemProps = {
@@ -43,7 +45,9 @@ const CustomMenu = ({
   noChevron = false,
   position = "right",
   verticalPosition = "bottom",
+  menuItemsClassName = "",
   customButton,
+  menuItemsWhiteBg = false,
 }: Props) => (
   <Menu as="div" className={`relative w-min whitespace-nowrap text-left ${className}`}>
     {({ open }) => (
@@ -55,7 +59,7 @@ const CustomMenu = ({
             {ellipsis || verticalEllipsis ? (
               <Menu.Button
                 type="button"
-                className="relative grid place-items-center rounded p-1 text-brand-secondary hover:bg-brand-surface-2 hover:text-brand-base focus:outline-none"
+                className="relative grid place-items-center rounded p-1 text-custom-text-200 hover:bg-custom-background-80 outline-none"
               >
                 <EllipsisHorizontalIcon
                   className={`h-4 w-4 ${verticalEllipsis ? "rotate-90" : ""}`}
@@ -64,8 +68,8 @@ const CustomMenu = ({
             ) : (
               <Menu.Button
                 type="button"
-                className={`flex cursor-pointer items-center justify-between gap-1 px-2.5 py-1 text-xs duration-300 hover:bg-brand-surface-2 ${
-                  open ? "bg-brand-surface-1 text-brand-base" : "text-brand-secondary"
+                className={`flex cursor-pointer items-center justify-between gap-1 px-2.5 py-1 text-xs duration-300 hover:bg-custom-background-80 ${
+                  open ? "bg-custom-background-90 text-custom-text-100" : "text-custom-text-200"
                 } ${
                   textAlignment === "right"
                     ? "text-right"
@@ -75,7 +79,7 @@ const CustomMenu = ({
                 } ${
                   noBorder
                     ? "rounded-md"
-                    : "rounded-md border border-brand-base shadow-sm focus:outline-none"
+                    : "rounded-md border border-custom-border-100 shadow-sm focus:outline-none"
                 } ${
                   width === "sm"
                     ? "w-10"
@@ -105,7 +109,7 @@ const CustomMenu = ({
           leaveTo="transform opacity-0 scale-95"
         >
           <Menu.Items
-            className={`absolute z-20 overflow-y-scroll whitespace-nowrap rounded-md border border-brand-base bg-brand-surface-1 p-1 text-xs shadow-lg focus:outline-none ${
+            className={`absolute z-20 overflow-y-scroll whitespace-nowrap rounded-md border p-1 text-xs shadow-lg focus:outline-none ${
               position === "left" ? "left-0 origin-top-left" : "right-0 origin-top-right"
             } ${verticalPosition === "top" ? "bottom-full mb-1" : "mt-1"} ${
               height === "sm"
@@ -127,7 +131,11 @@ const CustomMenu = ({
                 : width === "xl"
                 ? "w-48"
                 : "min-w-full"
-            }`}
+            } ${
+              menuItemsWhiteBg
+                ? "border-custom-border-200 bg-custom-background-100"
+                : "border-custom-border-100 bg-custom-background-90"
+            } ${menuItemsClassName}`}
           >
             <div className="py-1">{children}</div>
           </Menu.Items>
@@ -150,8 +158,8 @@ const MenuItem: React.FC<MenuItemProps> = ({
         <Link href={href ?? ""}>
           <a
             className={`${className} ${
-              active ? "bg-brand-surface-2" : ""
-            } hover:text-brand-muted-1 inline-block w-full select-none gap-2 truncate rounded px-1 py-1.5 text-left text-brand-secondary hover:bg-brand-surface-2`}
+              active ? "bg-custom-background-80" : ""
+            } hover:text-custom-text-200 inline-block w-full select-none gap-2 truncate rounded px-1 py-1.5 text-left text-custom-text-200 hover:bg-custom-background-80`}
             onClick={close}
           >
             {children}
@@ -161,8 +169,8 @@ const MenuItem: React.FC<MenuItemProps> = ({
         <button
           type="button"
           className={`${className} ${
-            active ? "bg-brand-surface-2" : ""
-          } hover:text-brand-muted-1 w-full select-none gap-2 truncate rounded px-1 py-1.5 text-left text-brand-secondary hover:bg-brand-surface-2`}
+            active ? "bg-custom-background-80" : ""
+          } hover:text-custom-text-200 w-full select-none gap-2 truncate rounded px-1 py-1.5 text-left text-custom-text-200 hover:bg-custom-background-80`}
           onClick={onClick}
         >
           {children}

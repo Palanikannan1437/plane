@@ -94,20 +94,19 @@ const ProjectAuthorizationWrapped: React.FC<Props> = ({
           <main
             className={`relative flex h-full w-full flex-col overflow-hidden ${
               bg === "primary"
-                ? "bg-brand-surface-1"
+                ? "bg-custom-background-100"
                 : bg === "secondary"
-                ? "bg-brand-sidebar"
-                : "bg-brand-base"
+                ? "bg-custom-background-90"
+                : "bg-custom-background-80"
             }`}
           >
-            {!noHeader && (
-              <AppHeader
-                breadcrumbs={breadcrumbs}
-                left={left}
-                right={right}
-                setToggleSidebar={setToggleSidebar}
-              />
-            )}
+            <AppHeader
+              breadcrumbs={breadcrumbs}
+              left={left}
+              right={right}
+              setToggleSidebar={setToggleSidebar}
+              noHeader={noHeader}
+            />
             <div className="h-full w-full overflow-hidden">
               <div className="h-full w-full overflow-x-hidden overflow-y-scroll">{children}</div>
             </div>

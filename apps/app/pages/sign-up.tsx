@@ -47,20 +47,15 @@ const SignUp: NextPage = () => {
         if (response) await mutateUser();
         router.push("/");
       })
-      .catch((err) => {
-        if (err.status === 400)
-          setToastAlert({
-            type: "error",
-            title: "Error!",
-            message: "An user already exists with this Email ID.",
-          });
-        else
-          setToastAlert({
-            type: "error",
-            title: "Error!",
-            message: "Something went wrong. Please try again later or contact the support team.",
-          });
-      });
+      .catch((err) =>
+        setToastAlert({
+          type: "error",
+          title: "Error!",
+          message:
+            err?.error ||
+            "Something went wrong. Please try again later or contact the support team.",
+        })
+      );
   };
 
   return (
@@ -70,12 +65,12 @@ const SignUp: NextPage = () => {
           <div className="flex flex-col gap-10 sm:mx-auto sm:w-full sm:max-w-md">
             <div className="flex flex-col items-center justify-center gap-10">
               <Image src={Logo} height={80} width={80} alt="Plane Web Logo" />
-              <div className="text-center text-xl font-medium text-brand-base">
+              <div className="text-center text-xl font-medium text-custom-text-100">
                 Create a new Plane Account
               </div>
             </div>
 
-            <div className="flex flex-col rounded-[10px] bg-brand-base shadow-md">
+            <div className="flex flex-col rounded-[10px] bg-custom-background-100 shadow-md">
               <EmailPasswordForm onSubmit={handleSignUp} />
             </div>
           </div>

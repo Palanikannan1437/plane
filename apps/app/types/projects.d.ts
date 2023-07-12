@@ -80,8 +80,8 @@ type ProjectViewTheme = {
 export interface IProjectMember {
   id: string;
   member: IUserLite;
-  project: IProject;
-  workspace: IWorkspace;
+  project: IProjectLite;
+  workspace: IWorkspaceLite;
   comment: string;
   role: 5 | 10 | 15 | 20;
 
@@ -113,6 +113,10 @@ export interface IProjectMemberInvitation {
   updated_by: string;
 }
 
+export interface IProjectBulkInviteFormData {
+  members: { role: 5 | 10 | 15 | 20; member_id: string }[];
+}
+
 export interface IGithubRepository {
   id: string;
   full_name: string;
@@ -123,4 +127,26 @@ export interface IGithubRepository {
 export interface GithubRepositoriesResponse {
   repositories: IGithubRepository[];
   total_count: number;
+}
+
+export type TProjectIssuesSearchParams = {
+  search: string;
+  parent?: boolean;
+  blocker_blocked_by?: boolean;
+  cycle?: boolean;
+  module?: boolean;
+  sub_issue?: boolean;
+  issue_id?: string;
+};
+
+export interface ISearchIssueResponse {
+  id: string;
+  name: string;
+  project_id: string;
+  project__identifier: string;
+  sequence_id: number;
+  state__color: string;
+  state__group: string;
+  state__name: string;
+  workspace__slug: string;
 }
